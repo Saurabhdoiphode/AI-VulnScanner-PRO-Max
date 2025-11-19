@@ -17,53 +17,29 @@ class OpenRedirectScanner:
     Detects unvalidated redirects and forwards
     """
     
-    # Open redirect test payloads
+    # Open redirect test payloads (optimized)
     REDIRECT_PAYLOADS = [
         # External domains
         "https://evil.com",
-        "http://evil.com",
         "//evil.com",
-        "///evil.com",
-        "////evil.com",
         
         # Protocol handlers
         "javascript:alert('XSS')",
-        "data:text/html,<script>alert('XSS')</script>",
         
         # URL encoding bypass
         "https%3A%2F%2Fevil.com",
-        "%2F%2Fevil.com",
-        
-        # Double encoding
-        "https%253A%252F%252Fevil.com",
-        
-        # CRLF injection in redirect
-        "/%0d%0aLocation:%20https://evil.com",
-        
-        # Backslash tricks
-        "https://evil.com\\",
-        "https:\\\\evil.com",
         
         # @ symbol tricks
         "https://legitimate.com@evil.com",
-        "https://legitimate.com%2540evil.com",
         
         # Dots and subdomain tricks
         "https://evil.com.legitimate.com",
-        "https://legitimateevil.com",
         
         # Absolute path to external
         "//google.com/%2f..",
         
-        # Whitespace
-        "https://evil.com%20",
-        " https://evil.com",
-        
         # Null byte
-        "https://evil.com%00",
-        
-        # Mixed encoding
-        "https://evil.com%E3%80%82",
+        "https://evil.com%00"
     ]
     
     # Redirect parameter names commonly used
@@ -73,7 +49,7 @@ class OpenRedirectScanner:
         'callback', 'goto', 'link', 'forward', 'out', 'view', 'to', 'r', 'ret'
     ]
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize Open Redirect Scanner
         

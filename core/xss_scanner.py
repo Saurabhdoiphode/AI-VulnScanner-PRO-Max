@@ -19,28 +19,14 @@ class XSSScanner:
     Tests for reflective, stored, and DOM-based XSS
     """
     
-    # XSS test payloads
+    # XSS test payloads (optimized for speed)
     XSS_PAYLOADS = [
         "<script>alert('XSS')</script>",
         "<img src=x onerror=alert('XSS')>",
         "<svg/onload=alert('XSS')>",
-        "javascript:alert('XSS')",
-        "<iframe src=javascript:alert('XSS')>",
-        "<body onload=alert('XSS')>",
-        "<input onfocus=alert('XSS') autofocus>",
-        "<select onfocus=alert('XSS') autofocus>",
-        "<textarea onfocus=alert('XSS') autofocus>",
-        "<marquee onstart=alert('XSS')>",
-        "<details open ontoggle=alert('XSS')>",
         "'\"><script>alert('XSS')</script>",
         "\"><img src=x onerror=alert('XSS')>",
-        "'><svg/onload=alert('XSS')>",
-        "<scr<script>ipt>alert('XSS')</scr</script>ipt>",
-        "%3Cscript%3Ealert('XSS')%3C/script%3E",
-        "<script>alert(String.fromCharCode(88,83,83))</script>",
-        "<img src=\"javascript:alert('XSS')\">",
-        "<object data=\"javascript:alert('XSS')\">",
-        "<embed src=\"javascript:alert('XSS')\">",
+        "javascript:alert('XSS')"
     ]
     
     # DOM-based XSS patterns
@@ -58,7 +44,7 @@ class XSSScanner:
         r"setInterval\s*\("
     ]
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize XSS Scanner
         

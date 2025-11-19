@@ -229,20 +229,19 @@ class VulnerabilityScanner:
         if not test_urls:
             test_urls = [f"{target}?id=1", f"{target}?page=home"]
         
-        test_urls = test_urls[:20]  # Limit for performance
+        test_urls = test_urls[:10]  # Limit for performance
         
         # SQL Injection (5%)
         self._update_progress("Testing for SQL injection...", 25)
-        for endpoint in test_urls[:10]:
+        for endpoint in test_urls[:3]:
             try:
                 vulns = self.sql_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"SQL scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # Test forms for SQL injection
-        for form in forms[:5]:
+        for form in forms[:3]:
             try:
                 if form.get('inputs'):
                     params = {inp['name']: 'test' for inp in form['inputs'] if inp.get('name')}
@@ -253,16 +252,15 @@ class VulnerabilityScanner:
         
         # XSS (5%)
         self._update_progress("Testing for XSS...", 30)
-        for endpoint in test_urls[:10]:
+        for endpoint in test_urls[:3]:
             try:
                 vulns = self.xss_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"XSS scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # Test forms for XSS
-        for form in forms[:5]:
+        for form in forms[:2]:
             try:
                 if form.get('inputs'):
                     params = {inp['name']: 'test' for inp in form['inputs'] if inp.get('name')}
@@ -273,43 +271,39 @@ class VulnerabilityScanner:
         
         # SSTI (5%)
         self._update_progress("Testing for SSTI...", 35)
-        for endpoint in test_urls[:8]:
+        for endpoint in test_urls[:2]:
             try:
                 vulns = self.ssti_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"SSTI scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # Command Injection (5%)
         self._update_progress("Testing for command injection...", 40)
-        for endpoint in test_urls[:8]:
+        for endpoint in test_urls[:2]:
             try:
                 vulns = self.cmd_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"CMD scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # Path Traversal (5%)
         self._update_progress("Testing for path traversal...", 45)
-        for endpoint in test_urls[:10]:
+        for endpoint in test_urls[:3]:
             try:
                 vulns = self.path_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"Path traversal scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # Open Redirect (3%)
         self._update_progress("Testing for open redirects...", 48)
-        for endpoint in test_urls[:10]:
+        for endpoint in test_urls[:3]:
             try:
                 vulns = self.redirect_scanner.scan_url(endpoint)
                 self.results['vulnerabilities'].extend(vulns)
             except Exception as e:
                 self.logger.debug(f"Redirect scan error on {endpoint}: {e}")
-            time.sleep(0.2)
         
         # File Upload (3%)
         self._update_progress("Testing file uploads...", 51)
@@ -416,9 +410,9 @@ class VulnerabilityScanner:
         
         # Analyze each vulnerability
         analyzed_vulns = []
-        total = len(vulnerabilities)
+        total = min(len(vulnerabilities), 5)
         
-        for i, vuln in enumerate(vulnerabilities[:20]):  # Limit to first 20 for performance
+        for i, vuln in enumerate(vulnerabilities[:5]):  # Limit to first 5 for speed
             try:
                 progress = 90 + (i / total * 5)  # 90-95%
                 self._update_progress(f"AI analyzing vulnerability {i+1}/{total}...", progress)
@@ -430,8 +424,6 @@ class VulnerabilityScanner:
                 
                 vuln['ai_analysis'] = ai_analysis
                 analyzed_vulns.append(vuln)
-                
-                time.sleep(0.3)  # Rate limiting
                 
             except Exception as e:
                 self.logger.error(f"AI analysis failed for vulnerability: {e}")
@@ -458,6 +450,42 @@ class VulnerabilityScanner:
         
         # Calculate statistics
         vulns = self.results['vulnerabilities']
+        # Enrich vulnerabilities with consistent details/location for UI/report clarity
+        for v in vulns:
+            try:
+                # Location synthesis
+                url = v.get('url') or v.get('endpoint') or self.results.get('target')
+                param = v.get('parameter')
+                method = (v.get('method') or 'GET').upper()
+                if not v.get('location'):
+                    loc_parts = []
+                    if url:
+                        loc_parts.append(f"URL: {url}")
+                    loc_parts.append(f"Method: {method}")
+                    if param:
+                        loc_parts.append(f"Parameter: {param}")
+                    v['location'] = ' | '.join(loc_parts)
+
+                # Details synthesis
+                if not v.get('details'):
+                    payload = v.get('payload')
+                    evidence = v.get('evidence')
+                    vtype = v.get('type', 'Vulnerability')
+                    desc = v.get('description')
+                    if desc:
+                        v['details'] = desc
+                    else:
+                        base = f"{vtype} detected"
+                        if param:
+                            base += f" on parameter '{param}'"
+                        if payload:
+                            base += f" using payload: {payload}"
+                        if evidence:
+                            base += f". Evidence: {str(evidence)[:200]}"
+                        v['details'] = base
+            except Exception:
+                # Best-effort enrichment; skip on any error
+                pass
         
         self.results['statistics'] = {
             'total_vulnerabilities': len(vulns),

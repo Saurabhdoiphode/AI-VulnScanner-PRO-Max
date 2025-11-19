@@ -16,28 +16,19 @@ class DirectoryFinder:
     Hidden directory and sensitive file scanner
     """
     
-    # Common directory names
+    # Common directory names (optimized)
     COMMON_DIRS = [
         'admin', 'administrator', 'login', 'wp-admin', 'phpmyadmin',
-        'backup', 'backups', 'old', 'temp', 'tmp', 'test', 'dev',
-        'staging', 'api', 'uploads', 'images', 'files', 'download',
-        'downloads', 'docs', 'documentation', 'dashboard', 'panel',
-        'cpanel', 'config', 'conf', 'private', 'secret', 'hidden'
+        'backup', 'api', 'config', 'dashboard', 'panel'
     ]
     
-    # Sensitive files
+    # Sensitive files (optimized)
     SENSITIVE_FILES = [
-        '.env', '.git/config', '.svn/entries', 'config.php', 'config.yml',
-        'database.yml', 'wp-config.php', 'web.config', 'backup.zip',
-        'backup.sql', 'dump.sql', 'database.sql', '.htaccess', '.htpasswd',
-        'phpinfo.php', 'info.php', 'test.php', 'robots.txt', 'sitemap.xml',
-        'crossdomain.xml', 'clientaccesspolicy.xml', 'README.md', 'CHANGELOG',
-        '.DS_Store', 'composer.json', 'package.json', 'yarn.lock',
-        'Gemfile', 'Gemfile.lock', 'requirements.txt', 'settings.py',
-        'docker-compose.yml', 'Dockerfile', '.dockerignore', '.gitignore'
+        '.env', '.git/config', 'config.php', 'wp-config.php', 'web.config',
+        'backup.sql', '.htaccess', 'phpinfo.php', 'robots.txt'
     ]
     
-    def __init__(self, timeout: int = 5, max_workers: int = 20):
+    def __init__(self, timeout: int = 2, max_workers: int = 30):
         """
         Initialize Directory Finder
         

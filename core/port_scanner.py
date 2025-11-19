@@ -39,7 +39,7 @@ class PortScanner:
         27017: 'MongoDB'
     }
     
-    def __init__(self, timeout: float = 1.0, max_workers: int = 100):
+    def __init__(self, timeout: float = 0.5, max_workers: int = 200):
         """
         Initialize Port Scanner
         

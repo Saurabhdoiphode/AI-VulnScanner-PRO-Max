@@ -19,22 +19,13 @@ class SQLInjectionScanner:
     Tests for error-based, boolean-based, time-based, and union-based SQL injection
     """
     
-    # SQL injection payloads for different database types
+    # SQL injection payloads for different database types (optimized for speed)
     ERROR_BASED_PAYLOADS = [
         "'",
-        "\"",
-        "' OR '1'='1",
         "' OR '1'='1'--",
-        "' OR '1'='1'/*",
-        "admin' OR '1'='1",
-        "admin' OR '1'='1'--",
-        "' OR 1=1--",
         "\" OR 1=1--",
-        "' OR 'a'='a",
-        "') OR ('a'='a",
-        "1' AND '1'='2",
-        "' UNION SELECT NULL--",
-        "' AND 1=CONVERT(int,(SELECT @@version))--"
+        "' OR 1=1--",
+        "' UNION SELECT NULL--"
     ]
     
     BOOLEAN_BASED_PAYLOADS = [
@@ -45,11 +36,8 @@ class SQLInjectionScanner:
     ]
     
     TIME_BASED_PAYLOADS = [
-        "'; WAITFOR DELAY '0:0:5'--",
-        "'; SELECT SLEEP(5)--",
-        "1' AND SLEEP(5)--",
-        "1' AND (SELECT * FROM (SELECT(SLEEP(5)))a)--",
-        "'; pg_sleep(5)--"
+        "1' AND SLEEP(3)--",
+        "'; SELECT SLEEP(3)--"
     ]
     
     # Error signatures for different databases
@@ -78,7 +66,7 @@ class SQLInjectionScanner:
         r"Warning.*\Wora_.*"
     ]
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize SQL Injection Scanner
         
@@ -167,8 +155,6 @@ class SQLInjectionScanner:
                 
             except Exception as e:
                 logger.debug(f"Error testing payload {payload}: {e}")
-            
-            time.sleep(0.2)  # Rate limiting
         
         return vulnerabilities
     
@@ -238,14 +224,14 @@ class SQLInjectionScanner:
                 start_time = time.time()
                 
                 if method.upper() == "POST":
-                    response = self.session.post(url, data=test_params, timeout=15, verify=False)
+                    response = self.session.post(url, data=test_params, timeout=8, verify=False)
                 else:
-                    response = self.session.get(url, params=test_params, timeout=15, verify=False)
+                    response = self.session.get(url, params=test_params, timeout=8, verify=False)
                 
                 elapsed = time.time() - start_time
                 
-                # If response took significantly longer (4+ seconds), likely vulnerable
-                if elapsed > 4:
+                # If response took significantly longer (2.5+ seconds), likely vulnerable
+                if elapsed > 2.5:
                     vulnerabilities.append({
                         'type': 'SQL Injection (Time-Based Blind)',
                         'url': url,

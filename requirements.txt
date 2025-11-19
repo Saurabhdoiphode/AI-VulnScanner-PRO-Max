@@ -6,6 +6,9 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 urllib3==2.1.0
 
+# Optional: MongoDB cache backend for web app
+pymongo==4.10.1
+
 # Database
 # No external dependency - uses built-in sqlite3
 

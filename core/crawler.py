@@ -19,13 +19,13 @@ class WebCrawler:
     Web crawler for discovering URLs, forms, and attack surfaces
     """
     
-    def __init__(self, max_depth: int = 2, max_urls: int = 20, timeout: int = 5):
+    def __init__(self, max_depth: int = 1, max_urls: int = 10, timeout: int = 3):
         """
         Initialize Web Crawler
         
         Args:
-            max_depth: Maximum crawl depth (default: 2 for faster scans)
-            max_urls: Maximum number of URLs to crawl (default: 20 for speed)
+            max_depth: Maximum crawl depth (default: 1 for faster scans)
+            max_urls: Maximum number of URLs to crawl (default: 10 for speed)
             timeout: Request timeout in seconds
         """
         self.max_depth = max_depth
@@ -87,8 +87,6 @@ class WebCrawler:
                             'depth': depth + 1,
                             'source': current_url
                         })
-                
-                time.sleep(0.1)  # Rate limiting (reduced for faster scans)
             
             except Exception as e:
                 logger.debug(f"Error crawling {current_url}: {e}")

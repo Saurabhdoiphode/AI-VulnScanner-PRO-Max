@@ -562,11 +562,24 @@ class ReportGenerator:
         for vuln in vulnerabilities:
             severity = vuln.get('severity', 'Low').lower()
             vuln_type = vuln.get('type', 'Unknown Vulnerability')
-            location = vuln.get('location', 'N/A')
-            details = vuln.get('details', 'No details available')
+            # Build enriched location/details if missing
+            url = vuln.get('url') or vuln.get('endpoint')
+            param = vuln.get('parameter')
+            method = (vuln.get('method') or 'GET').upper()
+            location = vuln.get('location') or ' | '.join([
+                f"URL: {url}" if url else None,
+                f"Method: {method}" if method else None,
+                f"Parameter: {param}" if param else None,
+            ]).replace('None', '').strip(' | ')
+            if not location:
+                location = 'N/A'
+            details = vuln.get('details') or vuln.get('description') or 'No details available'
             evidence = vuln.get('evidence', '')
             remediation = vuln.get('remediation', [])
             ai_analysis = vuln.get('ai_analysis', {})
+            payload = vuln.get('payload')
+            status_code = vuln.get('status_code')
+            response_snippet = vuln.get('response_snippet')
             
             html += f"""
                 <div class="vulnerability {severity}">
@@ -579,6 +592,13 @@ class ReportGenerator:
                     </div>
                     <div class="location">
                         <strong>📍 Location:</strong> {location}
+                    </div>
+                    <div class="location">
+                        <strong>🧾 Request Info:</strong>
+                        {('Method: ' + method) if method else ''}
+                        {(' | Parameter: ' + param) if param else ''}
+                        {(' | Payload: ' + payload) if payload else ''}
+                        {(' | Status: ' + str(status_code)) if status_code else ''}
                     </div>
 """
             
@@ -622,6 +642,15 @@ class ReportGenerator:
                     </div>
 """
             
+            # Response snippet (collapsed details could be added later; simple render for now)
+            if response_snippet:
+                html += f"""
+                    <div class="location">
+                        <strong>📄 Response Snippet:</strong>
+                        <pre style=\"white-space: pre-wrap; background:#fff; padding:10px; border-radius:6px; max-height:200px; overflow:auto;\">{response_snippet}</pre>
+                    </div>
+"""
+
             html += """
                 </div>
 """

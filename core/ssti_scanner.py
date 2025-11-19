@@ -18,47 +18,31 @@ class SSTIScanner:
     Supports detection for Jinja2, Twig, Freemarker, Velocity, and more
     """
     
-    # SSTI detection payloads for different template engines
+    # SSTI detection payloads for different template engines (optimized)
     SSTI_PAYLOADS = {
         'jinja2': [
             "{{7*7}}",
-            "{{7*'7'}}",
-            "{{ config }}",
-            "{{ self }}",
-            "{{config.items()}}",
-            "{{ ''.__class__.__mro__[1].__subclasses__() }}"
+            "{{7*'7'}}"
         ],
         'twig': [
             "{{7*7}}",
-            "{{7*'7'}}",
-            "{{_self}}",
-            "{{dump(app)}}",
-            "{{1+1}}"
+            "{{_self}}"
         ],
         'freemarker': [
             "${7*7}",
-            "#{7*7}",
-            "${{7*7}}",
-            "${7*'7'}",
-            "<#assign ex='freemarker.template.utility.Execute'?new()>${ex('id')}"
+            "#{7*7}"
         ],
         'velocity': [
-            "#set($x=7*7)$x",
-            "$class.inspect('java.lang.Runtime').type.getRuntime().exec('id')",
+            "#set($x=7*7)$x"
         ],
         'smarty': [
-            "{7*7}",
-            "{$smarty.version}",
-            "{php}echo 'SSTI';{/php}"
+            "{7*7}"
         ],
         'mako': [
-            "<%=7*7%>",
-            "${7*7}",
-            "<%import os;os.system('id')%>"
+            "<%=7*7%>"
         ],
         'erb': [
-            "<%= 7*7 %>",
-            "<%= system('id') %>"
+            "<%= 7*7 %>"
         ]
     }
     
@@ -71,7 +55,7 @@ class SSTIScanner:
         'smarty': ['smarty']
     }
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize SSTI Scanner
         

@@ -10,7 +10,10 @@ import os
 import logging
 import threading
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import sqlite3
+import json
+from urllib.parse import urlparse
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -37,6 +40,164 @@ scan_threads = {}
 
 # Initialize report generator
 report_generator = ReportGenerator()
+
+# --- Simple caching layer with optional MongoDB and fallback to SQLite ---
+DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+DB_PATH = os.path.join(DB_DIR, 'scans.db')
+MONGODB_URI = os.environ.get('MONGODB_URI')
+
+# Optional Mongo client (if env var provided)
+mongo_client = None
+mongo_collection = None
+try:
+    if MONGODB_URI:
+        from pymongo import MongoClient, ASCENDING
+        from pymongo.errors import PyMongoError
+        mongo_client = MongoClient(MONGODB_URI)
+        db = mongo_client.get_default_database() if mongo_client.get_default_database() else mongo_client['vulnscanner']
+        mongo_collection = db['scans']
+        # Ensure TTL index on created_at (10 days = 864000 seconds)
+        mongo_collection.create_index([('created_at', ASCENDING)], expireAfterSeconds=864000)
+        logger.info("MongoDB caching enabled (TTL 10 days)")
+except Exception as me:
+    logger.warning(f"MongoDB init failed, falling back to SQLite: {me}")
+    mongo_client = None
+    mongo_collection = None
+
+def _ensure_db():
+    os.makedirs(DB_DIR, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS scans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target TEXT NOT NULL,
+                normalized_target TEXT NOT NULL,
+                scan_types TEXT NOT NULL,
+                ai_model TEXT,
+                results_json TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def _normalize_target(url: str) -> str:
+    try:
+        parsed = urlparse(url)
+        return (parsed.hostname or url).lower()
+    except Exception:
+        return url.lower()
+
+def _scan_types_key(scan_types):
+    return ','.join(sorted(scan_types or []))
+
+def _cleanup_expired():
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        now = datetime.utcnow().isoformat()
+        cur.execute("DELETE FROM scans WHERE expires_at < ?", (now,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def _get_cached_result(target: str, scan_types, ai_model: str):
+    # Prefer MongoDB if configured and available
+    if mongo_collection is not None:
+        try:
+            norm = _normalize_target(target)
+            key = _scan_types_key(scan_types)
+            doc = mongo_collection.find_one(
+                {
+                    'normalized_target': norm,
+                    'scan_types': key,
+                    'ai_model': ai_model or ''
+                },
+                sort=[('created_at', -1)]
+            )
+            if doc and doc.get('results'):
+                return doc['results']
+        except Exception as e:
+            logger.warning(f"Mongo cache read failed, falling back to SQLite: {e}")
+
+    # SQLite fallback
+    _ensure_db()
+    _cleanup_expired()
+    norm = _normalize_target(target)
+    key = _scan_types_key(scan_types)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT results_json FROM scans
+            WHERE normalized_target = ? AND scan_types = ? AND IFNULL(ai_model,'') = IFNULL(?, '')
+            ORDER BY datetime(created_at) DESC
+            LIMIT 1
+            """,
+            (norm, key, ai_model)
+        )
+        row = cur.fetchone()
+        if row and row[0]:
+            try:
+                return json.loads(row[0])
+            except Exception:
+                return None
+        return None
+    finally:
+        conn.close()
+
+def _save_scan_result(target: str, scan_types, ai_model: str, results: dict):
+    # Prefer MongoDB if configured and available
+    if mongo_collection is not None:
+        try:
+            now = datetime.utcnow()
+            doc = {
+                'target': target,
+                'normalized_target': _normalize_target(target),
+                'scan_types': _scan_types_key(scan_types),
+                'ai_model': ai_model or '',
+                'results': results,
+                'created_at': now,
+            }
+            mongo_collection.insert_one(doc)
+            return
+        except Exception as e:
+            logger.warning(f"Mongo cache write failed, falling back to SQLite: {e}")
+
+    # SQLite fallback
+    _ensure_db()
+    norm = _normalize_target(target)
+    key = _scan_types_key(scan_types)
+    created_at = datetime.utcnow()
+    expires_at = created_at + timedelta(days=10)
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO scans (target, normalized_target, scan_types, ai_model, results_json, created_at, expires_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                target,
+                norm,
+                key,
+                ai_model,
+                json.dumps(results),
+                created_at.isoformat(),
+                expires_at.isoformat()
+            )
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 @app.route('/')
 def index():
@@ -78,9 +239,30 @@ def start_scan():
         if not target.startswith(('http://', 'https://')):
             target = 'https://' + target
         
+        # Check cache first (10-day TTL)
+        cached = _get_cached_result(target, scan_types, ai_model if ai_enabled else '')
+        if cached:
+            session_id = str(uuid.uuid4())
+            scan_sessions[session_id] = {
+                'status': 'completed',
+                'progress': 100,
+                'message': 'Loaded cached results (valid < 10 days)',
+                'target': target,
+                'start_time': datetime.now().isoformat(),
+                'results': cached,
+                'end_time': datetime.now().isoformat(),
+                'error': None
+            }
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'cached': True,
+                'message': 'Using cached results'
+            })
+
         # Generate session ID
         session_id = str(uuid.uuid4())
-        
+
         # Initialize scan session
         scan_sessions[session_id] = {
             'status': 'initializing',
@@ -117,6 +299,11 @@ def start_scan():
                 scan_sessions[session_id]['message'] = 'Scan complete!'
                 scan_sessions[session_id]['results'] = results
                 scan_sessions[session_id]['end_time'] = datetime.now().isoformat()
+                # Save to cache
+                try:
+                    _save_scan_result(target, scan_types, ai_model if ai_enabled else '', results)
+                except Exception as se:
+                    logger.warning(f"Failed to save cached results: {se}")
                 
                 logger.info(f"Scan completed for session {session_id}")
                 
@@ -358,6 +545,14 @@ if __name__ == '__main__':
     print("Press Ctrl+C to stop the server")
     print()
     
+    # Prepare DB cache on startup
+    try:
+        if mongo_collection is None:
+            _ensure_db()
+            _cleanup_expired()
+    except Exception as e:
+        logger.warning(f"Cache initialization warning: {e}")
+
     app.run(
         host='0.0.0.0',
         port=port,

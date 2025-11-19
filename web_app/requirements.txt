@@ -8,6 +8,9 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 urllib3==2.1.0
 
+# Optional: MongoDB cache backend
+pymongo==4.10.1
+
 # Optional: PDF Generation (uncomment if needed)
 # reportlab==4.0.7
 # pdfkit==1.0.0
