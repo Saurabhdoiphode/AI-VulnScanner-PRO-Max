@@ -1,0 +1,48 @@
+# AI-VulnScanner PRO Max - Requirements
+# Python 3.8+ required
+
+# Core dependencies
+requests==2.31.0
+beautifulsoup4==4.12.2
+urllib3==2.1.0
+
+# Database
+# No external dependency - uses built-in sqlite3
+
+# GUI
+# No external dependency - uses built-in tkinter
+
+# Network scanning
+# No external dependency - uses built-in socket
+
+# SSL/TLS
+# No external dependency - uses built-in ssl
+
+# Reporting
+# No external dependency for HTML - uses string formatting
+
+# Optional: PDF generation (if needed)
+# reportlab==4.0.7
+# matplotlib==3.8.2
+
+# Logging and utilities
+# No external dependency - uses built-in logging
+
+# NOTE: All core functionality works with minimal dependencies!
+# Only requests and beautifulsoup4 are strictly required.
+
+# For development/testing
+# pytest==7.4.3
+# black==23.12.1
+# flake8==6.1.0
+
+# AI Integration (Local - No API key required!)
+# Requires Ollama or LM Studio running locally
+# Download Ollama: https://ollama.ai
+# Run: ollama pull llama3
+# Run: ollama pull mistral
+# Run: ollama pull deepseek-coder
+# Run: ollama pull codellama
+
+# Alternative: LM Studio
+# Download: https://lmstudio.ai

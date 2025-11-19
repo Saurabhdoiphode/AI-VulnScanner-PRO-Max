@@ -1,0 +1,53 @@
+# AI-VulnScanner PRO Max - Web Application Requirements
+# Install: pip install -r requirements.txt
+
+# Core Dependencies
+flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+beautifulsoup4==4.12.2
+urllib3==2.1.0
+
+# Optional: PDF Generation (uncomment if needed)
+# reportlab==4.0.7
+# pdfkit==1.0.0
+
+# =====================================================
+# AI MODEL INSTALLATION (Ollama - FREE & LOCAL)
+# =====================================================
+#
+# 1. Install Ollama:
+#    Windows: Download from https://ollama.ai
+#    Linux: curl -fsSL https://ollama.ai/install.sh | sh
+#    Mac: brew install ollama
+#
+# 2. Pull AI Models (choose one or more):
+#    ollama pull llama3          # 4.7GB - Best overall
+#    ollama pull mistral         # 4.1GB - Fast scans
+#    ollama pull deepseek-coder  # 4.5GB - Code analysis
+#    ollama pull codellama       # 3.8GB - Lightweight
+#
+# 3. Start Ollama Service:
+#    ollama serve
+#    (Or it starts automatically on Windows/Mac)
+#
+# 4. Verify Installation:
+#    curl http://localhost:11434/api/tags
+#
+# =====================================================
+# QUICK START
+# =====================================================
+#
+# 1. Install dependencies:
+#    pip install -r requirements.txt
+#
+# 2. Run web application:
+#    python web_app/app.py
+#
+# 3. Open browser:
+#    http://localhost:5000
+#
+# =====================================================
+
+# Note: Only Flask, requests, and beautifulsoup4 are strictly required.
+# The scanner will work without AI models using rule-based analysis.
