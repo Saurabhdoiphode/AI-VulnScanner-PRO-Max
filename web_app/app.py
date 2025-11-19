@@ -350,13 +350,17 @@ if __name__ == '__main__':
     ╚══════════════════════════════════════════════════════════════╝
     """)
     
-    print("Server will start on: http://localhost:5000")
+    # Get port from environment variable (for deployment) or use 5000
+    import os
+    port = int(os.environ.get('PORT', 5000))
+    
+    print(f"Server will start on: http://localhost:{port}")
     print("Press Ctrl+C to stop the server")
     print()
     
     app.run(
         host='0.0.0.0',
-        port=5000,
-        debug=True,
+        port=port,
+        debug=os.environ.get('FLASK_ENV') != 'production',
         threaded=True
     )
