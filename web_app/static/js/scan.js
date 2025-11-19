@@ -321,11 +321,33 @@ async function downloadReport(format) {
         showToast(`Generating ${format.toUpperCase()} report...`, 'info');
         
         const url = `${API_BASE}/api/report/${format}/${currentSessionId}`;
-        window.location.href = url;
         
-        setTimeout(() => {
-            showToast('Report downloaded successfully!', 'success');
-        }, 1000);
+        // Use fetch to get the report with proper error handling
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `Server error: ${response.status}`);
+        }
+        
+        // Get the blob data
+        const blob = await response.blob();
+        
+        // Create download link and trigger download
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = `report_${currentSessionId}.${format}`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(a);
+        
+        showToast('Report downloaded successfully!', 'success');
         
     } catch (error) {
         console.error('Report download failed:', error);

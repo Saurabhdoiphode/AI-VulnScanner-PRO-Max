@@ -101,7 +101,8 @@ def _cleanup_expired():
     conn = sqlite3.connect(DB_PATH)
     try:
         cur = conn.cursor()
-        now = datetime.utcnow().isoformat()
+        from datetime import timezone
+        now = datetime.now(timezone.utc).isoformat()
         cur.execute("DELETE FROM scans WHERE expires_at < ?", (now,))
         conn.commit()
     finally:
@@ -111,6 +112,7 @@ def _get_cached_result(target: str, scan_types, ai_model: str):
     # Prefer MongoDB if configured and available
     if mongo_collection is not None:
         try:
+            from datetime import timezone
             norm = _normalize_target(target)
             key = _scan_types_key(scan_types)
             doc = mongo_collection.find_one(
@@ -157,7 +159,8 @@ def _save_scan_result(target: str, scan_types, ai_model: str, results: dict):
     # Prefer MongoDB if configured and available
     if mongo_collection is not None:
         try:
-            now = datetime.utcnow()
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
             doc = {
                 'target': target,
                 'normalized_target': _normalize_target(target),
@@ -173,9 +176,10 @@ def _save_scan_result(target: str, scan_types, ai_model: str, results: dict):
 
     # SQLite fallback
     _ensure_db()
+    from datetime import timezone
     norm = _normalize_target(target)
     key = _scan_types_key(scan_types)
-    created_at = datetime.utcnow()
+    created_at = datetime.now(timezone.utc)
     expires_at = created_at + timedelta(days=10)
     conn = sqlite3.connect(DB_PATH)
     try:
@@ -405,15 +409,19 @@ def generate_html_report(session_id):
         }), 400
     
     try:
-        filepath = report_generator.generate_html_report(session_data['results'])
-        return send_file(
-            filepath,
-            as_attachment=True,
-            download_name=f"report_{session_id}.html",
-            mimetype='text/html'
+        from flask import Response
+        # Generate HTML content directly without writing to disk
+        html_content = report_generator._generate_html_content(session_data['results'])
+        
+        return Response(
+            html_content,
+            mimetype='text/html',
+            headers={
+                'Content-Disposition': f'attachment; filename="report_{session_id}.html"'
+            }
         )
     except Exception as e:
-        logger.error(f"Report generation failed: {e}")
+        logger.error(f"HTML report generation failed: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
@@ -437,15 +445,20 @@ def generate_json_report(session_id):
         }), 400
     
     try:
-        filepath = report_generator.generate_json_report(session_data['results'])
-        return send_file(
-            filepath,
-            as_attachment=True,
-            download_name=f"report_{session_id}.json",
-            mimetype='application/json'
+        from flask import Response
+        import json as json_lib
+        # Generate JSON content directly without writing to disk
+        json_content = json_lib.dumps(session_data['results'], indent=2)
+        
+        return Response(
+            json_content,
+            mimetype='application/json',
+            headers={
+                'Content-Disposition': f'attachment; filename="report_{session_id}.json"'
+            }
         )
     except Exception as e:
-        logger.error(f"Report generation failed: {e}")
+        logger.error(f"JSON report generation failed: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
