@@ -37,8 +37,10 @@ env/
 # Reports and Logs
 reports/
 *.log
-*.html
-*.json
+# Allow application templates and report generator sources
+#!web_app/templates/*.html
+#!desktop_app/gui/*.html
+# (Removed global *.html ignore to keep Jinja templates tracked)
 scan_*.txt
 
 # Database

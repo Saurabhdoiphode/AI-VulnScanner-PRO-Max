@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run Scan - AI-VulnScanner PRO Max</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <a href="/" class="logo-link">
+                <span class="shield-icon">🛡️</span>
+                <span>AI-VulnScanner PRO Max</span>
+            </a>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/scan" class="active">Scan</a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="scan-page">
+        <div class="container">
+            <h1>🔍 Configure Security Scan</h1>
+            
+            <div class="scan-config" id="scanConfig">
+                <div class="config-section">
+                    <h2>Target Configuration</h2>
+                    <div class="form-group">
+                        <label for="scanTarget">Target URL or IP Address</label>
+                        <input 
+                            type="text" 
+                            id="scanTarget" 
+                            placeholder="https://example.com or 192.168.1.1"
+                            class="form-control"
+                        >
+                        <small>Enter the website URL or IP address to scan</small>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h2>Scan Types</h2>
+                    <div class="checkbox-grid">
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="scanType" value="web" checked>
+                            <div class="checkbox-content">
+                                <div class="checkbox-icon">🌐</div>
+                                <div class="checkbox-text">
+                                    <strong>Web Vulnerabilities</strong>
+                                    <p>SQL injection, XSS, SSTI, command injection</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="scanType" value="network" checked>
+                            <div class="checkbox-content">
+                                <div class="checkbox-icon">🔌</div>
+                                <div class="checkbox-text">
+                                    <strong>Network Scanning</strong>
+                                    <p>Port scanning, service detection, SSL/TLS</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="scanType" value="osint" checked>
+                            <div class="checkbox-content">
+                                <div class="checkbox-icon">🕵️</div>
+                                <div class="checkbox-text">
+                                    <strong>OSINT Gathering</strong>
+                                    <p>WHOIS, DNS, subdomains, geolocation</p>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="checkbox-card">
+                            <input type="checkbox" name="scanType" value="ai" checked id="aiCheckbox">
+                            <div class="checkbox-content">
+                                <div class="checkbox-icon">🤖</div>
+                                <div class="checkbox-text">
+                                    <strong>AI Analysis</strong>
+                                    <p>Intelligent vulnerability assessment</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h2>AI Model Selection</h2>
+                    <div class="radio-grid">
+                        <label class="radio-card">
+                            <input type="radio" name="aiModel" value="llama3" checked>
+                            <div class="radio-content">
+                                <strong>🦙 LLaMA 3 8B</strong>
+                                <p>Best overall • 4.7GB • Recommended</p>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card">
+                            <input type="radio" name="aiModel" value="mistral">
+                            <div class="radio-content">
+                                <strong>🌟 Mistral 7B</strong>
+                                <p>Fast scans • 4.1GB • Quick analysis</p>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card">
+                            <input type="radio" name="aiModel" value="deepseek-coder">
+                            <div class="radio-content">
+                                <strong>💻 DeepSeek Coder</strong>
+                                <p>Code focused • 4.5GB • Technical depth</p>
+                            </div>
+                        </label>
+                        
+                        <label class="radio-card">
+                            <input type="radio" name="aiModel" value="codellama">
+                            <div class="radio-content">
+                                <strong>🔧 CodeLLaMA</strong>
+                                <p>Lightweight • 3.8GB • Basic analysis</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button onclick="startScan()" class="btn-primary btn-large">
+                        <span class="btn-icon">▶️</span> Start Comprehensive Scan
+                    </button>
+                    <button onclick="window.location.href='/'" class="btn-secondary">
+                        ❌ Cancel
+                    </button>
+                </div>
+            </div>
+            
+            <div class="scan-progress" id="scanProgress" style="display: none;">
+                <div class="progress-header">
+                    <h2>⏳ Scan in Progress</h2>
+                    <div class="scan-target" id="progressTarget"></div>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                    <div class="progress-text" id="progressText">0%</div>
+                </div>
+                
+                <div class="progress-message" id="progressMessage">Initializing scan...</div>
+                
+                <div class="progress-details">
+                    <div class="detail-item">
+                        <strong>Session ID:</strong>
+                        <span id="sessionIdDisplay">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Status:</strong>
+                        <span id="statusDisplay">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <strong>Started:</strong>
+                        <span id="startTimeDisplay">-</span>
+                    </div>
+                </div>
+                
+                <div class="live-log" id="liveLog">
+                    <h3>📋 Live Scan Log</h3>
+                    <div class="log-content" id="logContent"></div>
+                </div>
+            </div>
+            
+            <div class="scan-results" id="scanResults" style="display: none;">
+                <div class="results-header">
+                    <h2>✅ Scan Complete!</h2>
+                    <div class="results-actions">
+                        <button onclick="downloadReport('html')" class="btn-primary">
+                            📄 Download HTML Report
+                        </button>
+                        <button onclick="downloadReport('json')" class="btn-secondary">
+                            📊 Download JSON
+                        </button>
+                        <button onclick="viewReport()" class="btn-secondary">
+                            👁️ View Report
+                        </button>
+                        <button onclick="resetScan()" class="btn-secondary">
+                            🔄 New Scan
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="results-summary" id="resultsSummary"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/scan.js') }}"></script>
+    <script>
+        // Check if quick scan target was set
+        const quickTarget = sessionStorage.getItem('quickScanTarget');
+        if (quickTarget) {
+            document.getElementById('scanTarget').value = quickTarget;
+            sessionStorage.removeItem('quickScanTarget');
+        }
+    </script>
+</body>
+</html>

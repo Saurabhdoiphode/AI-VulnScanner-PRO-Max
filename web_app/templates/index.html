@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-VulnScanner PRO Max - Web Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="hero-section">
+        <div class="container">
+            <div class="hero-content">
+                <div class="logo">
+                    <span class="shield-icon">🛡️</span>
+                    <h1>AI-VulnScanner <span class="pro">PRO Max</span></h1>
+                </div>
+                <p class="tagline">Enterprise-Grade AI-Powered Cybersecurity Vulnerability Scanner</p>
+                <p class="subtitle">FREE • Local AI • No API Keys Required • 100% Offline</p>
+                
+                <div class="quick-scan">
+                    <form id="quickScanForm" onsubmit="startQuickScan(event)">
+                        <div class="input-group">
+                            <input 
+                                type="text" 
+                                id="targetUrl" 
+                                placeholder="Enter target URL (e.g., https://example.com)"
+                                required
+                            >
+                            <button type="submit" class="btn-primary">
+                                <span class="btn-icon">🔍</span> Start Scan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🌐</div>
+                        <h3>Web Vulnerabilities</h3>
+                        <p>SQL Injection, XSS, SSTI, Command Injection, Path Traversal, CSRF, Open Redirects</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🔌</div>
+                        <h3>Network Scanning</h3>
+                        <p>Port scanning, Service detection, SSL/TLS analysis, Banner grabbing</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🕵️</div>
+                        <h3>OSINT Gathering</h3>
+                        <p>WHOIS, DNS records, Subdomain discovery, IP geolocation, Technology fingerprinting</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">🤖</div>
+                        <h3>AI Analysis</h3>
+                        <p>Local LLaMA 3, Mistral, DeepSeek models for intelligent vulnerability assessment</p>
+                    </div>
+                </div>
+                
+                <div class="advanced-options">
+                    <a href="/scan" class="btn-secondary">
+                        <span class="btn-icon">⚙️</span> Advanced Scan Options
+                    </a>
+                </div>
+                
+                <div class="ai-status" id="aiStatus">
+                    <div class="checking">Checking AI service...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="info-section">
+        <div class="container">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Enter Target</h3>
+                    <p>Input the URL or IP address you want to scan</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>Configure Scan</h3>
+                    <p>Choose scan types and AI model preferences</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Run Analysis</h3>
+                    <p>Watch real-time progress as AI analyzes vulnerabilities</p>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <h3>Get Report</h3>
+                    <p>Download comprehensive HTML/JSON reports</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tech-section">
+        <div class="container">
+            <h2>Powered By</h2>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <div class="tech-icon">🦙</div>
+                    <h4>LLaMA 3 8B</h4>
+                    <p>Meta's flagship model</p>
+                </div>
+                
+                <div class="tech-item">
+                    <div class="tech-icon">🌟</div>
+                    <h4>Mistral 7B</h4>
+                    <p>Fast & accurate</p>
+                </div>
+                
+                <div class="tech-item">
+                    <div class="tech-icon">💻</div>
+                    <h4>DeepSeek Coder</h4>
+                    <p>Code analysis specialist</p>
+                </div>
+                
+                <div class="tech-item">
+                    <div class="tech-icon">🔧</div>
+                    <h4>Ollama</h4>
+                    <p>Local AI runtime</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 AI-VulnScanner PRO Max | Enterprise Security Platform</p>
+            <p>FREE • Open Source • Privacy-Focused</p>
+        </div>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script>
+        // Check AI availability on page load
+        checkAIAvailability();
+        
+        function startQuickScan(event) {
+            event.preventDefault();
+            const target = document.getElementById('targetUrl').value;
+            
+            // Store target and redirect to scan page
+            sessionStorage.setItem('quickScanTarget', target);
+            window.location.href = '/scan';
+        }
+    </script>
+</body>
+</html>
