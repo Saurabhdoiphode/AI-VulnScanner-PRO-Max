@@ -8,6 +8,13 @@ from flask_cors import CORS
 import sys
 import os
 import logging
+
+if sys.platform == "win32":
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import threading
 import uuid
 from datetime import datetime, timedelta

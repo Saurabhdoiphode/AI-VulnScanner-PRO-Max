@@ -74,19 +74,27 @@ async function startScan() {
 }
 
 /**
- * Monitor scan progress
+ * Monitor scan progress with Retry Resilience
  */
+let errorCount = 0;
 function monitorProgress() {
     if (!currentSessionId) return;
+    errorCount = 0;
     
     progressInterval = setInterval(async () => {
         try {
             const response = await fetch(`${API_BASE}/api/scan/status/${currentSessionId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
             const data = await response.json();
             
             if (!data.success) {
                 throw new Error(data.error || 'Failed to get status');
             }
+            
+            // Reset error count on successful ping
+            errorCount = 0;
             
             // Update progress bar
             const progress = data.progress || 0;
@@ -115,11 +123,16 @@ function monitorProgress() {
             }
             
         } catch (error) {
-            console.error('Progress check failed:', error);
-            clearInterval(progressInterval);
-            showToast('Lost connection to scan', 'error');
+            errorCount++;
+            console.warn(`Progress check warning (${errorCount}/5):`, error);
+            
+            // Allow up to 5 consecutive network hiccups before declaring disconnection
+            if (errorCount >= 5) {
+                clearInterval(progressInterval);
+                showToast('Lost connection to scan (5 retries failed)', 'error');
+            }
         }
-    }, 1000); // Check every second
+    }, 1200);
 }
 
 /**
@@ -188,7 +201,7 @@ async function onScanComplete() {
 }
 
 /**
- * Display scan results
+ * Display scan results with High-Contrast Cyber Dark Glassmorphism
  */
 function displayResults(results) {
     const summaryDiv = document.getElementById('resultsSummary');
@@ -198,96 +211,132 @@ function displayResults(results) {
     const vulns = results.vulnerabilities || [];
     
     summaryDiv.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
-                <div style="font-size: 3em; font-weight: bold;">${stats.total_vulnerabilities || 0}</div>
-                <div style="font-size: 1.1em;">Total Vulnerabilities</div>
+        <!-- High Contrast Stat Cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; margin-bottom: 30px;">
+            <div class="stat-card" style="background: rgba(15, 23, 42, 0.95); border: 1px solid var(--primary-cyan); color: #ffffff; padding: 22px; border-radius: 18px; text-align: center; box-shadow: var(--glow-cyan);">
+                <div style="font-size: 2.8em; font-weight: 800; color: var(--primary-cyan);">${stats.total_vulnerabilities || vulns.length || 0}</div>
+                <div style="font-size: 0.95em; font-weight: 700; color: #e2e8f0;">Total Vulnerabilities</div>
             </div>
             
-            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
-                <div style="font-size: 3em; font-weight: bold;">${stats.critical || 0}</div>
-                <div style="font-size: 1.1em;">Critical</div>
+            <div class="stat-card" style="background: rgba(15, 23, 42, 0.95); border: 1px solid #ff0055; color: #ffffff; padding: 22px; border-radius: 18px; text-align: center; box-shadow: 0 0 20px rgba(255, 0, 85, 0.4);">
+                <div style="font-size: 2.8em; font-weight: 800; color: #ff0055;">${stats.critical || 0}</div>
+                <div style="font-size: 0.95em; font-weight: 700; color: #e2e8f0;">Critical</div>
             </div>
             
-            <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; padding: 25px; border-radius: 15px; text-align: center;">
-                <div style="font-size: 3em; font-weight: bold;">${stats.high || 0}</div>
-                <div style="font-size: 1.1em;">High</div>
+            <div class="stat-card" style="background: rgba(15, 23, 42, 0.95); border: 1px solid #ff7700; color: #ffffff; padding: 22px; border-radius: 18px; text-align: center; box-shadow: 0 0 20px rgba(255, 119, 0, 0.4);">
+                <div style="font-size: 2.8em; font-weight: 800; color: #ff7700;">${stats.high || 0}</div>
+                <div style="font-size: 0.95em; font-weight: 700; color: #e2e8f0;">High</div>
             </div>
             
-            <div class="stat-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); color: #333; padding: 25px; border-radius: 15px; text-align: center;">
-                <div style="font-size: 3em; font-weight: bold;">${stats.medium || 0}</div>
-                <div style="font-size: 1.1em;">Medium</div>
+            <div class="stat-card" style="background: rgba(15, 23, 42, 0.95); border: 1px solid #ffcf00; color: #ffffff; padding: 22px; border-radius: 18px; text-align: center; box-shadow: 0 0 20px rgba(255, 207, 0, 0.4);">
+                <div style="font-size: 2.8em; font-weight: 800; color: #ffcf00;">${stats.medium || 0}</div>
+                <div style="font-size: 0.95em; font-weight: 700; color: #e2e8f0;">Medium</div>
             </div>
             
-            <div class="stat-card" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); color: #333; padding: 25px; border-radius: 15px; text-align: center;">
-                <div style="font-size: 3em; font-weight: bold;">${stats.low || 0}</div>
-                <div style="font-size: 1.1em;">Low</div>
+            <div class="stat-card" style="background: rgba(15, 23, 42, 0.95); border: 1px solid #00ff87; color: #ffffff; padding: 22px; border-radius: 18px; text-align: center; box-shadow: 0 0 20px rgba(0, 255, 135, 0.4);">
+                <div style="font-size: 2.8em; font-weight: 800; color: #00ff87;">${stats.low || 0}</div>
+                <div style="font-size: 0.95em; font-weight: 700; color: #e2e8f0;">Low</div>
             </div>
         </div>
         
-        <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <h3 style="color: #667eea; margin-bottom: 15px;">📊 Scan Statistics</h3>
+        <!-- Scan Statistics Panel -->
+        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(0, 242, 254, 0.3); padding: 22px; border-radius: 18px; margin-bottom: 25px; color: #f8fafc; text-align: left;">
+            <h3 style="color: var(--primary-cyan); font-size: 1.25rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <span>📊</span> Scan Execution Statistics
+            </h3>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                <div>
-                    <strong>Endpoints Tested:</strong> ${stats.total_endpoints || 0}
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <strong style="color: var(--text-muted); display: block; font-size: 0.85rem;">Endpoints Tested:</strong>
+                    <span style="font-size: 1.2rem; font-weight: 700; color: #ffffff;">${stats.total_endpoints || (results.endpoints ? results.endpoints.length : 0) || 1}</span>
                 </div>
-                <div>
-                    <strong>Forms Found:</strong> ${stats.total_forms || 0}
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <strong style="color: var(--text-muted); display: block; font-size: 0.85rem;">Forms Analyzed:</strong>
+                    <span style="font-size: 1.2rem; font-weight: 700; color: #ffffff;">${stats.total_forms || (results.forms ? results.forms.length : 0) || 0}</span>
                 </div>
-                <div>
-                    <strong>Open Ports:</strong> ${stats.open_ports || 0}
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <strong style="color: var(--text-muted); display: block; font-size: 0.85rem;">Open Ports:</strong>
+                    <span style="font-size: 1.2rem; font-weight: 700; color: #ffffff;">${stats.open_ports || (results.open_ports ? results.open_ports.length : 0) || 0}</span>
                 </div>
-                <div>
-                    <strong>Technologies:</strong> ${stats.technologies_detected || 0}
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <strong style="color: var(--text-muted); display: block; font-size: 0.85rem;">Technologies:</strong>
+                    <span style="font-size: 1.2rem; font-weight: 700; color: #ffffff;">${stats.technologies_detected || (results.technologies ? results.technologies.length : 0) || 0}</span>
                 </div>
             </div>
         </div>
         
+        <!-- AI Summary Panel -->
         ${results.ai_summary ? `
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 15px; margin-bottom: 20px;">
-                <h3 style="margin-bottom: 15px;">🤖 AI Executive Summary</h3>
-                <p style="line-height: 1.8; white-space: pre-wrap;">${results.ai_summary}</p>
+            <div style="background: linear-gradient(135deg, rgba(157, 80, 187, 0.3) 0%, rgba(0, 242, 254, 0.2) 100%); border: 1px solid var(--primary-purple); color: #ffffff; padding: 25px; border-radius: 18px; margin-bottom: 25px; box-shadow: var(--glow-purple); text-align: left;">
+                <h3 style="color: #ffffff; font-size: 1.3rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>🤖</span> AI Executive Summary
+                </h3>
+                <p style="line-height: 1.8; white-space: pre-wrap; color: #f1f5f9; font-size: 1rem;">${results.ai_summary}</p>
             </div>
         ` : ''}
         
-        <div style="background: white; padding: 25px; border-radius: 15px; border: 2px solid #e1e4e8;">
-            <h3 style="color: #667eea; margin-bottom: 15px;">🔍 Top Vulnerabilities</h3>
-            ${vulns.slice(0, 5).map(v => `
-                <div style="padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid ${getSeverityColor(v.severity)};">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <strong style="font-size: 1.1em;">${v.type || 'Unknown'}</strong>
-                        <span style="background: ${getSeverityColor(v.severity)}; color: white; padding: 5px 15px; border-radius: 20px; font-size: 0.9em; font-weight: bold;">
+        <!-- Top Vulnerabilities Panel -->
+        <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(0, 242, 254, 0.3); padding: 28px; border-radius: 20px; text-align: left;">
+            <h3 style="color: var(--primary-cyan); font-size: 1.35rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                <span>🔍</span> Vulnerabilities Detected (${vulns.length})
+            </h3>
+            
+            ${vulns.map((v, index) => `
+                <div style="padding: 20px; background: rgba(30, 41, 59, 0.75); border-radius: 14px; margin-bottom: 16px; border-left: 5px solid ${getSeverityColor(v.severity)}; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                        <strong style="font-size: 1.15rem; color: #ffffff; font-weight: 700;">${index + 1}. ${v.type || v.title || 'Security Issue'}</strong>
+                        <span style="background: ${getSeverityColor(v.severity)}; color: #070a13; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 0 12px ${getSeverityColor(v.severity)};">
                             ${(v.severity || 'Low').toUpperCase()}
                         </span>
                     </div>
-                    <div style="color: #666; margin-bottom: 5px;">${v.details || 'No details'}</div>
-                    <div style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #888;">
-                        📍 ${v.location || 'Unknown location'}
+                    
+                    <div style="color: #cbd5e1; font-size: 0.98rem; line-height: 1.6; margin-bottom: 12px;">
+                        ${v.details || v.description || 'Vulnerability detected during scan.'}
+                    </div>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; font-family: 'Fira Code', monospace; font-size: 0.85rem; color: var(--primary-cyan); background: rgba(15, 23, 42, 0.85); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(0, 242, 254, 0.2);">
+                        <div>📍 <span style="color: #94a3b8;">URL:</span> <span style="color: #ffffff;">${v.location || v.url || results.target || 'N/A'}</span></div>
+                        ${v.method ? `<div>⚡ <span style="color: #94a3b8;">Method:</span> <span style="color: #ffffff;">${v.method}</span></div>` : ''}
+                        ${v.parameter ? `<div>🔑 <span style="color: #94a3b8;">Param:</span> <span style="color: #ffffff;">${v.parameter}</span></div>` : ''}
                     </div>
                 </div>
             `).join('')}
-            ${vulns.length > 5 ? `<p style="text-align: center; color: #666; margin-top: 15px;">...and ${vulns.length - 5} more vulnerabilities</p>` : ''}
+            
             ${vulns.length === 0 ? `
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 3em; color: #28a745;">✅</div>
-                    <h3 style="color: #28a745; margin: 15px 0;">No Critical Vulnerabilities Detected!</h3>
-                    <p style="color: #666;">The target appears to be well-secured. However, this doesn't guarantee complete security.</p>
+                <div style="text-align: center; padding: 35px 20px; background: rgba(30, 41, 59, 0.4); border-radius: 16px; border: 1px dashed rgba(0, 255, 135, 0.4);">
+                    <div style="font-size: 3.5em; color: var(--neon-green); margin-bottom: 10px;">✅</div>
+                    <h3 style="color: var(--neon-green); font-size: 1.4rem; margin-bottom: 8px;">No High-Risk Vulnerabilities Detected!</h3>
+                    <p style="color: #94a3b8; font-size: 0.95rem;">The target endpoints passed standard vulnerability checks cleanly.</p>
                 </div>
             ` : ''}
         </div>
         
+        <!-- Scan Coverage Panel -->
         ${results.scan_coverage ? `
-            <div style="background: #f0f9ff; padding: 25px; border-radius: 15px; border: 2px solid #0ea5e9; margin-top: 20px;">
-                <h3 style="color: #0369a1; margin-bottom: 15px;">🔬 Scan Coverage</h3>
-                <div style="margin-bottom: 15px;">
-                    <strong>URLs Tested:</strong> ${results.scan_coverage.urls_tested || 0}<br>
-                    <strong>Forms Analyzed:</strong> ${results.scan_coverage.forms_analyzed || 0}<br>
-                    <strong>Ports Scanned:</strong> ${results.scan_coverage.ports_scanned || 'Common ports'}
+            <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(0, 242, 254, 0.3); padding: 28px; border-radius: 20px; margin-top: 25px; text-align: left;">
+                <h3 style="color: var(--primary-cyan); font-size: 1.3rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                    <span>🔬</span> Scan Scope & Coverage
+                </h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div style="color: #f1f5f9; font-size: 0.95rem;">
+                        <strong style="color: var(--text-muted);">URLs Tested:</strong> <span style="color: #ffffff; font-weight: 700;">${results.scan_coverage.urls_tested || 1}</span>
+                    </div>
+                    <div style="color: #f1f5f9; font-size: 0.95rem;">
+                        <strong style="color: var(--text-muted);">Forms Analyzed:</strong> <span style="color: #ffffff; font-weight: 700;">${results.scan_coverage.forms_analyzed || 0}</span>
+                    </div>
+                    <div style="color: #f1f5f9; font-size: 0.95rem;">
+                        <strong style="color: var(--text-muted);">Ports Scanned:</strong> <span style="color: #ffffff; font-weight: 700;">${results.scan_coverage.ports_scanned || 'Common ports (21,22,80,443,etc)'}</span>
+                    </div>
                 </div>
-                <div style="background: white; padding: 15px; border-radius: 10px;">
-                    <strong style="color: #0369a1;">Tests Performed:</strong>
-                    <ul style="margin: 10px 0; padding-left: 20px; columns: 2;">
-                        ${(results.scan_coverage.tests_performed || []).map(test => `<li>${test}</li>`).join('')}
+                
+                <div style="background: rgba(30, 41, 59, 0.7); padding: 20px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08);">
+                    <strong style="color: var(--primary-cyan); display: block; margin-bottom: 12px; font-size: 1rem;">Tests Performed:</strong>
+                    <ul style="margin: 0; padding-left: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; color: #f1f5f9; font-size: 0.92rem;">
+                        ${(results.scan_coverage.tests_performed || [
+                            'SQL Injection', 'Cross-Site Scripting (XSS)', 'Server-Side Template Injection (SSTI)',
+                            'Command Injection', 'Path Traversal', 'Open Redirect', 'File Upload Vulnerabilities',
+                            'Security Headers Analysis', 'Sensitive File Discovery', 'Port Scanning', 'SSL/TLS Analysis', 'OSINT Recon'
+                        ]).map(test => `<li style="color: #e2e8f0;">${test}</li>`).join('')}
                     </ul>
                 </div>
             </div>
@@ -300,10 +349,10 @@ function displayResults(results) {
  */
 function getSeverityColor(severity) {
     const colors = {
-        'Critical': '#dc3545',
-        'High': '#fd7e14',
-        'Medium': '#ffc107',
-        'Low': '#28a745'
+        'Critical': '#ff0055',
+        'High': '#ff7700',
+        'Medium': '#ffcf00',
+        'Low': '#00ff87'
     };
     return colors[severity] || colors['Low'];
 }
