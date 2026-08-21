@@ -9,7 +9,10 @@ from urllib.parse import urljoin, urlparse, parse_qs
 from typing import List, Dict, Set, Any
 import logging
 import time
+import socket
 from collections import deque
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
@@ -19,25 +22,68 @@ class WebCrawler:
     Web crawler for discovering URLs, forms, and attack surfaces
     """
     
-    def __init__(self, max_depth: int = 1, max_urls: int = 10, timeout: int = 3):
+    def __init__(self, max_depth: int = 3, max_urls: int = 200, timeout: int = 10, max_retries: int = 2,
+                 rate_limit: float = 1.0, max_time_per_url: int = 15):
         """
         Initialize Web Crawler
         
         Args:
-            max_depth: Maximum crawl depth (default: 1 for faster scans)
-            max_urls: Maximum number of URLs to crawl (default: 10 for speed)
-            timeout: Request timeout in seconds
+            max_depth: Maximum crawl depth (default: 3 for thorough scans)
+            max_urls: Maximum number of URLs to crawl (default: 200 for large sites)
+            timeout: Request timeout in seconds (read timeout)
+            max_retries: Maximum retry attempts for failed requests
+            rate_limit: Minimum seconds between requests (default: 1.0)
+            max_time_per_url: Max total time to spend on a single URL including retries
         """
         self.max_depth = max_depth
         self.max_urls = max_urls
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.rate_limit = rate_limit
+        self.max_time_per_url = max_time_per_url
+        
+        # Create session with retry strategy
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
         })
+        
+        # Configure retry strategy - only retry on specific server errors, not connection errors
+        retry_strategy = Retry(
+            total=max_retries,
+            backoff_factor=0.5,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+            raise_on_status=False,
+            connect=False,  # Don't retry on connection errors
+            read=False,     # Don't retry on read errors
+            redirect=False  # Don't retry on redirect errors
+        )
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy, 
+            pool_connections=10, 
+            pool_maxsize=20,
+            pool_block=False
+        )
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+        
         self.visited_urls: Set[str] = set()
         self.discovered_urls: List[Dict[str, Any]] = []
         self.forms: List[Dict[str, Any]] = []
+        self.failed_urls: List[Dict[str, Any]] = []
+        self.connection_errors = 0
+        self.max_connection_errors = 30  # Stop if too many connection errors
+        self.skipped_urls: Set[str] = set()  # Track URLs we've decided to skip
+        self.last_request_time = 0
+        
+        # Set default socket timeout
+        socket.setdefaulttimeout(timeout)
     
     def crawl(self, start_url: str) -> Dict[str, Any]:
         """
@@ -54,6 +100,9 @@ class WebCrawler:
         base_domain = urlparse(start_url).netloc
         queue = deque([(start_url, 0)])  # (url, depth)
         
+        consecutive_errors = 0
+        max_consecutive_errors = 10
+        
         while queue and len(self.visited_urls) < self.max_urls:
             current_url, depth = queue.popleft()
             
@@ -63,10 +112,17 @@ class WebCrawler:
             try:
                 logger.info(f"Crawling: {current_url} (depth: {depth})")
                 self.visited_urls.add(current_url)
+                consecutive_errors = 0  # Reset on success
                 
-                response = self.session.get(current_url, timeout=self.timeout, verify=False)
+                response = self.session.get(
+                    current_url, 
+                    timeout=self.timeout, 
+                    verify=False,
+                    allow_redirects=True
+                )
                 
                 if response.status_code != 200:
+                    logger.debug(f"Non-200 status for {current_url}: {response.status_code}")
                     continue
                 
                 # Parse HTML
@@ -88,17 +144,67 @@ class WebCrawler:
                             'source': current_url
                         })
             
+            except requests.exceptions.Timeout:
+                logger.warning(f"Timeout crawling {current_url}")
+                self.connection_errors += 1
+                consecutive_errors += 1
+                self.failed_urls.append({
+                    'url': current_url,
+                    'error': 'Timeout',
+                    'depth': depth
+                })
+                
+            except requests.exceptions.ConnectionError:
+                logger.warning(f"Connection error for {current_url}")
+                self.connection_errors += 1
+                consecutive_errors += 1
+                self.failed_urls.append({
+                    'url': current_url,
+                    'error': 'Connection Error',
+                    'depth': depth
+                })
+                
+            except requests.exceptions.TooManyRedirects:
+                logger.warning(f"Too many redirects for {current_url}")
+                self.connection_errors += 1
+                consecutive_errors += 1
+                self.failed_urls.append({
+                    'url': current_url,
+                    'error': 'Too Many Redirects',
+                    'depth': depth
+                })
+                
             except Exception as e:
                 logger.debug(f"Error crawling {current_url}: {e}")
+                self.connection_errors += 1
+                consecutive_errors += 1
+                self.failed_urls.append({
+                    'url': current_url,
+                    'error': str(e)[:100],
+                    'depth': depth
+                })
+            
+            # Stop if too many consecutive errors (likely network issue)
+            if consecutive_errors >= max_consecutive_errors:
+                logger.warning(f"Too many consecutive errors ({consecutive_errors}), pausing crawl")
+                time.sleep(5)  # Wait before continuing
+                consecutive_errors = 0
+            
+            # Stop if too many total connection errors
+            if self.connection_errors >= self.max_connection_errors:
+                logger.warning(f"Max connection errors reached ({self.max_connection_errors}), stopping crawl")
+                break
         
-        logger.info(f"Crawl complete. Found {len(self.visited_urls)} URLs and {len(self.forms)} forms")
+        logger.info(f"Crawl complete. Found {len(self.visited_urls)} URLs, {len(self.forms)} forms, {len(self.failed_urls)} failed")
         
         return {
             'urls': list(self.visited_urls),
             'discovered_urls': self.discovered_urls,
             'forms': self.forms,
+            'failed_urls': self.failed_urls,
             'total_urls': len(self.visited_urls),
-            'total_forms': len(self.forms)
+            'total_forms': len(self.forms),
+            'connection_errors': self.connection_errors
         }
     
     def _extract_links(self, soup: BeautifulSoup, current_url: str, base_domain: str) -> List[str]:
