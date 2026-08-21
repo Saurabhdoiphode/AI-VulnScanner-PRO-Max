@@ -69,18 +69,18 @@ class VulnerabilityScanner:
         else:
             self.ai_engine = None
         
-        # Initialize all scanners
-        self.web_crawler = WebCrawler()
-        self.sql_scanner = SQLInjectionScanner()
+        # Initialize all scanners with robust limits for large targets
+        self.web_crawler = WebCrawler(max_depth=2, max_urls=30, timeout=5)
+        self.sql_scanner = SQLInjectionScanner(timeout=5)
         self.xss_scanner = XSSScanner()
         self.ssti_scanner = SSTIScanner()
         self.cmd_scanner = CommandInjectionScanner()
         self.path_scanner = PathTraversalScanner()
         self.redirect_scanner = OpenRedirectScanner()
         self.header_scanner = HeaderScanner()
-        self.directory_finder = DirectoryFinder()
+        self.directory_finder = DirectoryFinder(timeout=3, max_workers=30)
         self.tech_fingerprint = TechFingerprint()
-        self.port_scanner = PortScanner()
+        self.port_scanner = PortScanner(timeout=1.0, max_workers=100)
         self.ssl_checker = SSLChecker()
         self.osint_scanner = OSINTScanner()
         self.file_upload_tester = FileUploadTester()

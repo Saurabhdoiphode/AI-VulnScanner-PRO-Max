@@ -74,7 +74,7 @@ async function startScan() {
 }
 
 /**
- * Monitor scan progress with Retry Resilience
+ * Monitor scan progress with Unlimited Resilient Retries (No disconnection drops)
  */
 let errorCount = 0;
 function monitorProgress() {
@@ -93,8 +93,11 @@ function monitorProgress() {
                 throw new Error(data.error || 'Failed to get status');
             }
             
-            // Reset error count on successful ping
-            errorCount = 0;
+            // Reset error count on successful status check
+            if (errorCount > 0) {
+                errorCount = 0;
+                document.getElementById('statusDisplay').textContent = data.status || 'Scanning...';
+            }
             
             // Update progress bar
             const progress = data.progress || 0;
@@ -103,7 +106,7 @@ function monitorProgress() {
             
             // Update status
             document.getElementById('statusDisplay').textContent = data.status;
-            document.getElementById('progressMessage').textContent = data.message || 'Processing...';
+            document.getElementById('progressMessage').textContent = data.message || 'Deep scanning target...';
             
             if (data.start_time) {
                 document.getElementById('startTimeDisplay').textContent = formatDateTime(data.start_time);
@@ -124,15 +127,11 @@ function monitorProgress() {
             
         } catch (error) {
             errorCount++;
-            console.warn(`Progress check warning (${errorCount}/5):`, error);
-            
-            // Allow up to 5 consecutive network hiccups before declaring disconnection
-            if (errorCount >= 5) {
-                clearInterval(progressInterval);
-                showToast('Lost connection to scan (5 retries failed)', 'error');
-            }
+            console.warn(`Reconnecting to scanner stream (${errorCount})...`, error);
+            document.getElementById('statusDisplay').textContent = 'Reconnecting...';
+            // Infinite silent reconnect mode for heavy background scans
         }
-    }, 1200);
+    }, 1500);
 }
 
 /**
